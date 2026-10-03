@@ -18,6 +18,7 @@ export function PublicLayout() {
         <nav className="site-nav">
           <NavLink to="/events">Events</NavLink>
           <NavLink to="/clubs">Clubs</NavLink>
+          <NavLink to="/shop">Shop</NavLink>
           <NavLink to="/news">News</NavLink>
           <NavLink to="/cart" className="cart-link">
             Cart{count > 0 && <span className="cart-count">{count}</span>}

@@ -41,14 +41,15 @@ export default function Cart() {
   return (
     <div className="narrow">
       <div className="page-head">
-        <h1>Your cart</h1>
+        <h1>Merchandise cart</h1>
         {items[0]?.clubName && <p className="muted">From the {items[0].clubName} shop</p>}
+        <p className="muted small">This cart is for club merchandise only. Event tickets are registered separately in your <Link to="/tickets">ticket register</Link>.</p>
       </div>
       {items.length === 0 ? (
         <div className="card empty-state">
-          <p>Your cart is empty.</p>
-          <Link className="btn btn-primary" to="/clubs">
-            Find a club shop
+          <p>Your merchandise cart is empty.</p>
+          <Link className="btn btn-primary" to="/shop">
+            Browse club shops
           </Link>
         </div>
       ) : (

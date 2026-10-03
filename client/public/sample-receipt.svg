@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="820" viewBox="0 0 640 820">
+  <rect width="640" height="820" fill="#f4f1e9"/>
+  <rect x="72" y="48" width="496" height="724" rx="14" fill="#fff" stroke="#d9d4c8" stroke-width="3"/>
+  <text x="320" y="112" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#253047">SAMPLE CAMPUS SUPPLIES</text>
+  <text x="320" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#687187">DEMO RECEIPT · NOT A REAL PURCHASE</text>
+  <path d="M112 184H528" stroke="#d9d4c8" stroke-width="2" stroke-dasharray="8 8"/>
+  <text x="112" y="236" font-family="Arial, sans-serif" font-size="19" fill="#253047">Receipt No.</text>
+  <text x="528" y="236" text-anchor="end" font-family="Arial, sans-serif" font-size="19" fill="#253047">DEMO-1023</text>
+  <text x="112" y="278" font-family="Arial, sans-serif" font-size="19" fill="#253047">Date</text>
+  <text x="528" y="278" text-anchor="end" font-family="Arial, sans-serif" font-size="19" fill="#253047">Sample transaction</text>
+  <path d="M112 310H528" stroke="#d9d4c8" stroke-width="2"/>
+  <text x="112" y="358" font-family="Arial, sans-serif" font-size="19" fill="#253047">Event supplies</text>
+  <text x="528" y="358" text-anchor="end" font-family="Arial, sans-serif" font-size="19" fill="#253047">₹1,750.00</text>
+  <text x="112" y="402" font-family="Arial, sans-serif" font-size="19" fill="#253047">Tax</text>
+  <text x="528" y="402" text-anchor="end" font-family="Arial, sans-serif" font-size="19" fill="#253047">Included</text>
+  <path d="M112 436H528" stroke="#d9d4c8" stroke-width="2"/>
+  <text x="112" y="486" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#253047">TOTAL</text>
+  <text x="528" y="486" text-anchor="end" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#253047">₹1,750.00</text>
+  <rect x="112" y="548" width="416" height="94" rx="8" fill="#fff9db"/>
+  <text x="320" y="588" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#8a6100">FOR DEMONSTRATION ONLY</text>
+  <text x="320" y="618" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#8a6100">Use this image to preview receipt review.</text>
+  <text x="320" y="710" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" fill="#687187">Sample data — no payment has been made</text>
+</svg>

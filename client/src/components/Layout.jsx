@@ -64,7 +64,8 @@ function buildMenu(ctx) {
       items: [
         { to: '/dashboard', label: 'Dashboard', end: true },
         { to: '/events', label: 'Public Events', end: true },
-        { to: '/tickets', label: 'My Registrations' },
+        { to: '/shop', label: 'Shop', end: true },
+        { to: '/tickets', label: 'Ticket register' },
         { to: '/orders', label: 'My Orders' },
         { to: '/clubs', label: 'Explore clubs', end: true },
       ],
@@ -75,8 +76,9 @@ function buildMenu(ctx) {
       items: [
         { to: '/dashboard', label: 'Dashboard', end: true },
         { to: '/events', label: 'Events', end: true },
+        { to: '/shop', label: 'Shop', end: true },
         ...(isVerifiedStudent(ctx) ? [{ to: '/events/college', label: 'College events' }] : []),
-        { to: '/tickets', label: 'My Registrations' },
+        { to: '/tickets', label: 'Ticket register' },
         { to: '/membership', label: 'My Membership' },
         { to: '/orders', label: 'My Orders' },
         { to: '/announcements', label: 'Announcements' },

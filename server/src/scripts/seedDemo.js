@@ -22,6 +22,7 @@ const ticketService = require('../services/ticketService');
 const shopService = require('../services/shopService');
 const ledgerService = require('../services/ledgerService');
 const { handlePaid } = require('../services/paymentHandlers');
+const seedCatalog = require('./seedCatalog');
 
 if (process.env.NODE_ENV === 'production') {
   console.error('seed:demo is for development only.');
@@ -47,7 +48,8 @@ const paidOnline = (paymentId, userId) => paymentService.confirmOnlinePayment(pa
 (async () => {
   await connectDB();
   if (await db.User.findOne({ where: { email: 'platform@demo.test' } })) {
-    console.log('Demo data already exists. Nothing to do.');
+    console.log('Demo accounts already exist. Ensuring sample clubs, events and shop products are present.');
+    await seedCatalog();
     return db.sequelize.close();
   }
 
@@ -206,6 +208,7 @@ const paidOnline = (paymentId, userId) => paymentService.confirmOnlinePayment(pa
   await db.SupportRequest.create({ userId: john.id, collegeId: null, subject: 'How do I change my email?', message: 'I signed up with my old email address.' });
   await db.Subscriber.create({ clubId: coding.id, email: 'fan@example.com', name: 'Coding Fan', unsubscribeToken: crypto.randomBytes(24).toString('hex') });
 
+  await seedCatalog();
   console.log('Demo data created: 2 colleges, 4 clubs, events, tickets, shop, fundraiser, money and announcements.');
   console.log(`All demo accounts use DEMO_PASSWORD (default ${process.env.DEMO_PASSWORD ? 'set in .env' : 'Demo@12345'}). See the list at the top of src/scripts/seedDemo.js.`);
   await db.sequelize.close();

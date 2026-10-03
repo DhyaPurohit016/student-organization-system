@@ -9,6 +9,12 @@ run('Hierarchy', async () => {
   check('public college list works', s === 200 && Array.isArray(j.colleges));
   const guest = await signup('Plain Guest');
   check('sign up without a college → guest (NONE)', guest.user.role === 'USER' && guest.user.collegeStatus === 'NONE' && !guest.user.collegeId);
+  const savedGuest = await db.User.findByPk(guest.id);
+  check('sign up persists the account in the database', savedGuest?.email === guest.email);
+  [s, j] = await call('POST', '/auth/login', { email: guest.email, password: 'Smoke@1234' });
+  check('saved account can sign in and receive a session', s === 200 && j.user?.id === guest.id && Boolean(j.token));
+  [s, j] = await call('GET', '/me/context', null, j.token);
+  check('signed-in account can access its authenticated profile', s === 200 && j.user?.id === guest.id);
   [s, j] = await call('POST', '/auth/register', { name: 'Sneaky', email: `sneaky.${Date.now()}@smoke.test`, password: 'Smoke@1234', role: 'PLATFORM_ADMIN' });
   check("can't sign up as platform admin", s === 201 && j.user.role === 'USER');
   [s] = await call('POST', '/auth/register', { name: 'Dup', email: guest.email, password: 'Smoke@1234' });

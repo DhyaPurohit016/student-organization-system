@@ -25,8 +25,8 @@ export default function MyTickets() {
     <>
       <div className="page-head row-between">
         <div>
-          <h1>My tickets</h1>
-          <p className="muted">Show the QR code at the door. Turn your screen brightness up.</p>
+          <h1>Ticket register</h1>
+          <p className="muted">Your event registrations and tickets are kept separately from your merchandise cart. Show the QR code at the door.</p>
         </div>
         <Link to="/events" className="btn btn-ghost">
           Find events

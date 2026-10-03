@@ -75,3 +75,24 @@ The system is successful when:
 
 This analysis assumes a single student organization with recurring events and a rotating leadership team. Before implementation, validate the organization’s approval rules, required personal-data fields, reporting obligations, event types, and whether one deployment must support multiple independent organizations.
 
+## Development sample users
+
+The normal account flow stores registrations in the configured MySQL database. After submitting the sign-up form, the app confirms account creation and opens sign-in with the email prefilled; users enter their password to receive a session and access their dashboard.
+
+From `server/`, run `npm run seed:users` to add 500 fictional accounts and populate every active college with around 30 clubs, 30 past/current/upcoming events per club, eight shop products per club, membership plans, finance ledger entries, a fundraiser and sample bills for clubs with staff. `npm run seed:demo` also ensures that every active club has the sample shop products and catalog data, including when demo accounts already exist. Run `npm run seed:catalog` later to add or repair the same catalog for all active colleges and clubs. The roster and catalog templates are maintained in `server/src/data/sampleUsers.js` and `server/src/data/sampleCatalog.js`; event managers use the club `MANAGER` role and finance users use `TREASURER`. These commands are idempotent and refuse to run when `NODE_ENV=production`. All sample accounts use `DEMO_PASSWORD` (default: `Demo@12345`).
+
+For the built-in role walkthrough, first run `npm run seed:demo` from `server/`. Then sign in with one of these accounts (all use the same demo password):
+
+| Role | Username (email) |
+| --- | --- |
+| Platform Admin | `platform@demo.test` |
+| College Head | `head@ldce.demo` |
+| Club/Event Manager | `krupa@ldce.demo` |
+| Finance Manager (Treasurer) | `tara@ldce.demo` |
+| Volunteer | `priya@ldce.demo` |
+| Member | `rahul@ldce.demo` |
+| Registered Guest | `john@guest.demo` |
+
+The default password is `Demo@12345`. If `DEMO_PASSWORD` was overridden when seeding, use that value instead. For the additional 500-account roster created by `npm run seed:users`, the role email ranges are `person001`–`person250` (members), `person251`–`person350` (volunteers), `person351`–`person352` (college heads), `person353`–`person426` (event managers), and `person427`–`person500` (finance), all at `@sample500.demo.test`.
+
+The public `/shop` page links to each club's store. Club stores provide category filters, search, stock filtering, price sorting, variant selection, member pricing and the shared cart. Club pages let visitors switch between upcoming, live and past events.

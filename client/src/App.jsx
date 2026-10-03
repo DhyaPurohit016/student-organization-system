@@ -14,6 +14,7 @@ import EventDetail from './pages/public/EventDetail';
 import Clubs from './pages/public/Clubs';
 import ClubPage from './pages/public/ClubPage';
 import Shop from './pages/public/Shop';
+import ShopDirectory from './pages/public/ShopDirectory';
 import Cart from './pages/public/Cart';
 import News, { Unsubscribe } from './pages/public/News';
 // Me
@@ -83,6 +84,7 @@ export default function App() {
         <Route path="/events/:id" element={<EventDetail />} />
         <Route path="/clubs" element={<Clubs />} />
         <Route path="/clubs/:clubId" element={<ClubPage />} />
+        <Route path="/shop" element={<ShopDirectory />} />
         <Route path="/clubs/:clubId/shop" element={<Shop />} />
         <Route path="/cart" element={<Cart />} />
       </Route>

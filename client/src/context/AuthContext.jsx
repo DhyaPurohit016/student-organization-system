@@ -46,7 +46,6 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => saveSession((await api.post('/auth/login', { email, password })).data);
-  const register = async (form) => saveSession((await api.post('/auth/register', form)).data);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
@@ -72,7 +71,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, ctx, loading, login, register, logout, saveSession, updateUser, refreshContext }}>
+    <AuthContext.Provider value={{ user, ctx, loading, login, logout, saveSession, updateUser, refreshContext }}>
       {children}
     </AuthContext.Provider>
   );

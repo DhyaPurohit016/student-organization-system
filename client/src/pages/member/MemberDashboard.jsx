@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import api from '../../api/client';
+import api, { errorMessage } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Badge from '../../components/Badge';
 import StatCard from '../../components/StatCard';
@@ -11,7 +11,10 @@ import { COLLEGE_STATUS, ROLE_LABEL, TASK_STATUS, activeClubs, isStaffAnywhere }
 export default function MemberDashboard() {
   const { user, ctx } = useAuth();
   const [tickets, setTickets] = useState(null);
-  const [upcoming, setUpcoming] = useState(null);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [guestClubs, setGuestClubs] = useState(null);
+  const [guestEventsLoaded, setGuestEventsLoaded] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState('');
   const [news, setNews] = useState([]);
   const [helping, setHelping] = useState(null);
   const staff = isStaffAnywhere(ctx);
@@ -19,7 +22,28 @@ export default function MemberDashboard() {
   useEffect(() => {
     if (!ctx || ctx.isPlatformAdmin) return;
     api.get('/me/tickets').then((r) => setTickets(r.data.tickets.filter((t) => t.upcoming))).catch(() => setTickets([]));
-    api.get('/events').then((r) => setUpcoming(r.data.events.filter((e) => e.status === 'PUBLISHED').length)).catch(() => {});
+    if (ctx.collegeStatus === 'NONE') {
+      api.get('/clubs')
+        .then((response) => setGuestClubs(response.data.clubs))
+        .catch((err) => setDiscoveryError(errorMessage(err)));
+      api.get('/events?limit=60')
+        .then((response) => {
+          setUpcomingEvents(response.data.events.filter((event) => event.status === 'PUBLISHED'));
+          setGuestEventsLoaded(true);
+        })
+        .catch((err) => {
+          setDiscoveryError(errorMessage(err));
+          setGuestEventsLoaded(true);
+        });
+    } else {
+      const clubIds = ctx.clubs.filter((club) => club.status === 'ACTIVE').map((club) => club.id);
+      Promise.all(clubIds.map((clubId) => api.get(`/events?clubId=${clubId}&limit=60`)))
+        .then((responses) => {
+          const unique = new Map(responses.flatMap((response) => response.data.events).map((event) => [event.id, event]));
+          setUpcomingEvents([...unique.values()].filter((event) => event.status === 'PUBLISHED'));
+        })
+        .catch(() => setUpcomingEvents([]));
+    }
     api.get('/announcements/feed').then((r) => setNews(r.data.announcements.slice(0, 4))).catch(() => {});
     if (staff) {
       Promise.all([api.get('/me/volunteering'), api.get('/me/tasks'), api.get('/me/claims')])
@@ -39,6 +63,13 @@ export default function MemberDashboard() {
   if (ctx.headOf.length && !activeClubs(ctx).length) return <Navigate to={`/college/${ctx.headOf[0].id}`} replace />;
 
   const clubs = activeClubs(ctx);
+  const myClubIds = new Set(clubs.map((club) => club.id));
+  const isGuest = ctx.collegeStatus === 'NONE';
+  const eventsInMyClubs = upcomingEvents
+    .filter((event) => isGuest
+      ? new Date(event.endsAt || event.startsAt).getTime() >= Date.now()
+      : myClubIds.has(event.clubId) && new Date(event.startsAt).getTime() >= Date.now())
+    .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
   const pending = ctx.clubs.filter((c) => c.status === 'PENDING');
   const cs = COLLEGE_STATUS[ctx.collegeStatus];
 
@@ -71,6 +102,64 @@ export default function MemberDashboard() {
         </div>
       )}
 
+      <section className="member-upcoming section-gap">
+        <div className="row-between">
+          <div>
+            <h2 className="section-title">{isGuest ? 'Public events to explore' : 'Upcoming in your clubs'}</h2>
+            <p className="muted small">
+              {isGuest
+                ? 'Upcoming and happening-now public events from clubs across the platform.'
+                : 'Events from clubs you have joined. Open an event to see details and your registration options.'}
+            </p>
+          </div>
+          <Link to="/events" className="small">Browse all events →</Link>
+        </div>
+        {isGuest && discoveryError && <div className="alert alert-error">{discoveryError}</div>}
+        {isGuest && !guestEventsLoaded && !discoveryError && <p className="muted">Loading public events…</p>}
+        {eventsInMyClubs.length === 0 && (!isGuest || guestEventsLoaded) ? (
+          <div className="card empty-state">
+            {isGuest ? 'No public events are available right now.' : 'No upcoming club events right now.'} <Link to="/clubs">Discover a club</Link>
+          </div>
+        ) : eventsInMyClubs.length > 0 && (
+          <div className="event-grid">
+            {eventsInMyClubs.slice(0, 6).map((event) => (
+              <Link key={event.id} to={`/events/${event.id}`} className="card member-event-card">
+                <span className="badge tone-info">{event.club?.name || 'Club event'}</span>
+                <h3>{event.title}</h3>
+                <p className="muted small">{eventWhen(event)}</p>
+                <span className="small">{event.memberPrice === 0 ? 'Free member enrolment' : 'View event and tickets'} →</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {isGuest && (
+        <section className="section-gap">
+          <div className="row-between">
+            <div>
+              <h2 className="section-title">Clubs to discover</h2>
+              <p className="muted small">Browse clubs from every active college and open a club to see its details and events.</p>
+            </div>
+            <Link to="/clubs" className="small">Browse all clubs →</Link>
+          </div>
+          {!guestClubs && !discoveryError && <p className="muted">Loading clubs…</p>}
+          {guestClubs?.length === 0 && <div className="card empty-state">No clubs are available right now.</div>}
+          <div className="club-grid">
+            {guestClubs?.slice(0, 6).map((club) => (
+              <Link key={club.id} to={`/clubs/${club.id}`} className="card club-card">
+                {club.logoUrl ? <img src={club.logoUrl} alt="" className="club-logo" /> : <span className="club-logo placeholder">{club.name[0]}</span>}
+                <div>
+                  <h3>{club.name}</h3>
+                  <div className="muted small">{club.college.name} · {club.members} member{club.members === 1 ? '' : 's'}</div>
+                  {club.description && <p className="small clamp-2">{club.description}</p>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="stat-grid">
         {staff ? (
           <>
@@ -79,9 +168,9 @@ export default function MemberDashboard() {
             <StatCard label="Pending Expenses" value={helping?.pendingExpenses} to="/expenses" />
           </>
         ) : (
-          <StatCard label="Upcoming Events" value={upcoming} to="/events" />
+          <StatCard label="Upcoming in My Clubs" value={eventsInMyClubs.length} to="/events" />
         )}
-        <StatCard label="My Registrations" value={tickets?.length} to="/tickets" />
+        <StatCard label="Ticket register" value={tickets?.length} to="/tickets" />
       </div>
 
       <div className="grid-2 section-gap">
@@ -111,7 +200,7 @@ export default function MemberDashboard() {
 
         <section className="card">
           <div className="row-between">
-            <h3>My Registrations</h3>
+            <h3>Ticket register</h3>
             <Link to="/tickets" className="small">
               All →
             </Link>
@@ -139,37 +228,41 @@ export default function MemberDashboard() {
         <section className="card">
           <div className="row-between">
             <h3>My Membership</h3>
-            <Link to="/membership" className="small">
-              Cards & dues →
-            </Link>
+            <div className="row-actions">
+              <Link to="/clubs" className="small">Discover clubs →</Link>
+              <Link to="/membership" className="small">Membership cards →</Link>
+            </div>
           </div>
           {clubs.length === 0 && pending.length === 0 && (
             <p className="muted">
               You haven't joined any clubs yet. <Link to="/clubs">Find one</Link>
             </p>
           )}
-          <ul className="plain-list">
+          <div className="member-club-grid">
             {clubs.map((c) => (
-              <li key={c.id} className="row-between">
-                <span>
-                  <Link to={`/clubs/${c.id}`}>
-                    <strong>{c.name}</strong>
-                  </Link>
-                  <span className="muted small"> · {c.college.code}</span>
-                </span>
-                <span className="row-actions">
+              <article key={c.id} className="member-club-card">
+                <Link to={`/clubs/${c.id}`} className="member-club-main">
+                  <strong>{c.name}</strong>
+                  <span className="muted small">{c.college.name}</span>
+                </Link>
+                <div className="row-between member-club-foot">
                   <span className={`role-badge role-${c.role.toLowerCase()}`}>{ROLE_LABEL[c.role]}</span>
                   {c.duesRequired && <Badge status="EXPIRED">Dues</Badge>}
-                </span>
-              </li>
+                  <Link to={`/clubs/${c.id}/shop`} className="small">Shop →</Link>
+                </div>
+              </article>
             ))}
-            {pending.map((c) => (
-              <li key={c.id} className="row-between">
-                <Link to={`/clubs/${c.id}`}>{c.name}</Link>
-                <Badge status="PENDING">Request sent</Badge>
-              </li>
-            ))}
-          </ul>
+          </div>
+          {pending.length > 0 && (
+            <ul className="plain-list member-pending-list">
+              {pending.map((c) => (
+                <li key={c.id} className="row-between">
+                  <Link to={`/clubs/${c.id}`}>{c.name}</Link>
+                  <Badge status="PENDING">Request sent</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section className="card">

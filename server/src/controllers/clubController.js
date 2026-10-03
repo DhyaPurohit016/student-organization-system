@@ -32,7 +32,7 @@ async function listClubs(req, res) {
     attributes: ['id', 'name', 'code', 'description', 'logoUrl', 'collegeId'],
     include: [{ model: College, as: 'college', attributes: ['id', 'name', 'code', 'city'], where: { status: 'ACTIVE' } }],
     order: [['name', 'ASC']],
-    limit: 200,
+    limit: 1000,
   });
   const counts = clubs.length
     ? Object.fromEntries(

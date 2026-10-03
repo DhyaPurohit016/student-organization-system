@@ -7,7 +7,7 @@ export default function Login() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ email: location.state?.email || '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -36,6 +36,7 @@ export default function Login() {
         <h1>Welcome back</h1>
         <p className="muted">Log in to CampusClubs</p>
 
+        {location.state?.registered && <div className="alert alert-success">Your account has been created. Sign in with your email and password to continue.</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
         <label>

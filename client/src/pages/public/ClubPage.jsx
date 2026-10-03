@@ -15,6 +15,9 @@ export default function ClubPage() {
   const location = useLocation();
   const [data, setData] = useState(null);
   const [events, setEvents] = useState([]);
+  const [eventPeriod, setEventPeriod] = useState('upcoming');
+  const [eventLoading, setEventLoading] = useState(true);
+  const [eventError, setEventError] = useState('');
   const [error, setError] = useState('');
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [message, setMessage] = useState('');
@@ -22,7 +25,18 @@ export default function ClubPage() {
 
   const load = useCallback(() => {
     api.get(`/clubs/${clubId}`).then((r) => setData(r.data)).catch((err) => setError(errorMessage(err)));
-    api.get(`/events?clubId=${clubId}`).then((r) => setEvents(r.data.events)).catch(() => {});
+    setEventLoading(true);
+    setEventError('');
+    Promise.all([
+      api.get(`/events?clubId=${clubId}&limit=60`),
+      api.get(`/events?clubId=${clubId}&when=past&limit=60`),
+    ])
+      .then(([upcoming, past]) => {
+        const unique = new Map([...upcoming.data.events, ...past.data.events].map((event) => [event.id, event]));
+        setEvents([...unique.values()].sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt)));
+      })
+      .catch((err) => setEventError(errorMessage(err)))
+      .finally(() => setEventLoading(false));
   }, [clubId]);
   useEffect(load, [load]);
 
@@ -55,6 +69,14 @@ export default function ClubPage() {
   if (!data) return error ? <div className="alert alert-error">{error}</div> : <p className="muted">Loading…</p>;
   const { club, me, plans, news, members, managers } = data;
   const showPlans = me?.status === 'ACTIVE' && plans.length > 0 && (me.duesRequired || plans.length);
+  const now = Date.now();
+  const visibleEvents = events.filter((event) => {
+    const startsAt = new Date(event.startsAt).getTime();
+    const endsAt = new Date(event.endsAt || new Date(startsAt + 6 * 60 * 60 * 1000)).getTime();
+    if (eventPeriod === 'live') return startsAt <= now && endsAt >= now;
+    if (eventPeriod === 'past') return endsAt < now;
+    return startsAt > now;
+  });
 
   return (
     <div className="club-page">
@@ -182,8 +204,21 @@ export default function ClubPage() {
       )}
 
       <section className="section-gap">
-        <h2 className="section-title">Events</h2>
-        {events.length === 0 ? <p className="muted">No upcoming events you can see.</p> : <div className="event-grid">{events.map((e) => <EventCard key={e.id} event={e} />)}</div>}
+        <div className="row-between club-events-heading">
+          <div>
+            <h2 className="section-title">Club events</h2>
+            <p className="muted small">Browse previous, live and upcoming events. Select an event to view details and registration options.</p>
+          </div>
+          <div className="seg" role="tablist" aria-label="Club event period">
+            <button role="tab" aria-selected={eventPeriod === 'upcoming'} className={eventPeriod === 'upcoming' ? 'on' : ''} onClick={() => setEventPeriod('upcoming')}>Upcoming</button>
+            <button role="tab" aria-selected={eventPeriod === 'live'} className={eventPeriod === 'live' ? 'on' : ''} onClick={() => setEventPeriod('live')}>Happening now</button>
+            <button role="tab" aria-selected={eventPeriod === 'past'} className={eventPeriod === 'past' ? 'on' : ''} onClick={() => setEventPeriod('past')}>Past</button>
+          </div>
+        </div>
+        {eventError && <div className="alert alert-error">{eventError}</div>}
+        {eventLoading && <p className="muted">Loading events…</p>}
+        {!eventLoading && visibleEvents.length === 0 && <div className="card empty-state">No {eventPeriod === 'live' ? 'live' : eventPeriod} events to show.</div>}
+        <div className="event-grid">{visibleEvents.map((event) => <EventCard key={event.id} event={event} />)}</div>
       </section>
 
       <section className="section-gap" id="news">

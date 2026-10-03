@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { homeFor, useAuth } from '../context/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api, { errorMessage } from '../api/client';
 
 const EMPTY = { name: '', email: '', studentId: '', phone: '', collegeId: '', password: '', confirm: '' };
 
 export default function Register() {
-  const { user, register } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
@@ -31,8 +31,8 @@ export default function Register() {
     try {
       const { confirm, ...payload } = form; // eslint-disable-line no-unused-vars
       if (!payload.collegeId) delete payload.collegeId;
-      const u = await register(payload);
-      navigate(homeFor(u), { replace: true });
+      await api.post('/auth/register', payload);
+      navigate('/login', { replace: true, state: { email: payload.email, registered: true } });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
