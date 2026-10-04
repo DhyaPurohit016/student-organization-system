@@ -1,79 +1,106 @@
-# Student Organization System
+# CampusClubs — multi-college student organization platform
 
-## Problem statement
+One platform for many colleges and their clubs. It replaces spreadsheets, WhatsApp blasts, cash-at-the-door
+tickets, notebook budgets and receipt-chasing: **clubs, members, events, tickets, merchandise, announcements,
+volunteer tasks and finance**, kept separately for each club.
 
-Student organizations run on information that is usually scattered: attendance in a paper sheet, event plans in chat messages, membership details in personal spreadsheets, and approvals in conversations that disappear after an event. This makes a simple question—*who is responsible for what, and what happens next?*—surprisingly difficult to answer.
+**Stack:** MySQL (or MariaDB) · Express · Sequelize · React (Vite) · Node.js · JWT
 
-The problem is not merely storing student records. It is coordinating a small, changing community where members join and leave, committees share work, events have deadlines, and leaders need enough visibility to make fair decisions without turning participation into unnecessary administration.
+## Run locally
 
-This project aims to provide one dependable workspace for an organization to manage its members, activities, and operational decisions. Its value is in creating a clear chain from **member → role → task/event → outcome**, so that knowledge survives beyond any one office-bearer or academic year.
+Requires Node 20+ and MySQL 8 (or MariaDB 10.4+, e.g. from XAMPP) running.
 
-## Why this is different from a student-management system
+```bash
+# 1. API
+cd server
+npm install
+cp .env.example .env        # set DB_USER / DB_PASSWORD, JWT_SECRET and ADMIN_EMAIL / ADMIN_PASSWORD
+npm run seed                # creates the database + tables and the first Platform Admin
+npm run seed:demo           # optional: 2 colleges, several clubs and a semester of data (development only)
+npm run dev                 # http://localhost:5000
 
-A student-management system is centred on an institution's academic relationship with a student: enrolment, courses, grades, and fees. A student organization has a different operating model:
-
-- Participation is voluntary and varies by event.
-- A member may hold several roles across committees.
-- Success is measured through engagement, delivery, and continuity—not marks.
-- Leadership changes frequently, so handover is a core requirement.
-- Information access must reflect organization roles while respecting member privacy.
-
-The system should therefore support collaboration and accountability without assuming that every member is an administrator or that every activity follows a fixed academic workflow.
-
-## Users and their needs
-
-| User | What they need to know or do |
-| --- | --- |
-| Members | Maintain a profile, discover activities, register, see their responsibilities, and track participation. |
-| Committee leads | Organize teams, assign work, monitor progress, and identify gaps before an event. |
-| Organization leaders | Manage memberships and roles, approve plans, review participation, and preserve institutional memory. |
-| Faculty adviser or administrator | Maintain appropriate oversight and access reliable summaries when needed. |
-
-## Core challenges to solve
-
-1. **Fragmented records** — Replace isolated spreadsheets and message threads with a shared, current source of truth.
-2. **Unclear ownership** — Make responsibilities, deadlines, and approval states visible instead of relying on verbal follow-up.
-3. **Event coordination** — Bring planning, registration, attendance, volunteers, and post-event results into one lifecycle.
-4. **Membership continuity** — Retain a usable history of roles, contributions, and handovers as leadership rotates.
-5. **Fair access and privacy** — Give people only the information and actions required for their role, while protecting personal data.
-
-## Intended scope
-
-At a minimum, the product should make these relationships manageable:
-
-```text
-Organization
- ├── Members
- │    └── Roles and committees
- ├── Events
- │    ├── Registrations and attendance
- │    └── Tasks, owners, and deadlines
- └── Activity history and reports
+# 2. Client (new terminal)
+cd client
+npm install
+npm run dev                 # http://localhost:5173
 ```
 
-Useful capabilities may include member onboarding, role assignment, event publishing, registrations, attendance tracking, task assignment, announcements, approval workflows, and summary reporting. These should be introduced around real organization workflows, rather than as disconnected features.
+The database (`DB_NAME`, default `student_org`) and its tables are created automatically.
 
-## Success criteria
+> **Upgrading from the single-club version?** The data model changed a lot (colleges, clubs, club members).
+> Start with a **new, empty database** (change `DB_NAME`, or drop the old one) and run `npm run seed` again.
+> `DB_SYNC_ALTER=true` is only for small additive changes, not for this move.
+>
+> **Already on the multi-college version?** Start the API once with `DB_SYNC_ALTER=true` to add the new
+> columns and the `support_requests` table (volunteer offers, volunteers needed, Help & Support).
 
-The system is successful when:
+The dev client forwards `/api` to `http://localhost:5000`. To point it at another API, set `API_TARGET`
+(and `CLIENT_PORT` for a different client port) before `npm run dev`.
 
-- a member can quickly understand their current commitments;
-- an event lead can identify outstanding work without searching several channels;
-- a leader can make membership and planning decisions from current information;
-- a new committee can understand previous activity without relying on former members; and
-- the organization reduces duplicate data entry while maintaining appropriate privacy controls.
+**Demo logins** (after `npm run seed:demo`, password = `DEMO_PASSWORD`, default `Demo@12345`):
 
-## Design principles
+| Login | Who they are |
+|---|---|
+| `platform@demo.test` | Platform Admin |
+| `head@ldce.demo` · `head@nirma.demo` | College Heads of LDCE and Nirma |
+| `krupa@ldce.demo` | Manager of the Coding Club (and volunteer in Robotics) |
+| `amit@ldce.demo` | Manager of the Robotics and Cultural clubs |
+| `tara@ldce.demo` | Treasurer of the Coding Club |
+| `priya@ldce.demo` | Volunteer in the Coding Club, on the door check-in team |
+| `rahul@ldce.demo` | Member of the Coding Club |
+| `cal@ldce.demo` | LDCE student, join request waiting in the Coding Club |
+| `pat@ldce.demo` | Signed up for LDCE, waiting for college approval |
+| `neha@nirma.demo` | Student of another college (Nirma) |
+| `john@guest.demo` | Guest with no college |
 
-- **One source of truth:** Record information once and reuse it across workflows.
-- **Role-aware by default:** Actions and visibility follow organizational responsibility.
-- **Low-friction participation:** Routine member actions should be quick on common devices.
-- **Traceable, not burdensome:** Important decisions and changes are visible without excessive process.
-- **Built for handover:** Historical context is a product feature, not an afterthought.
+The demo seed refuses to run when `NODE_ENV=production`. Don't use demo accounts on a real deployment.
 
-## Assumptions to validate
+**Tests:** with the API running, `cd server && npm test` runs 332 checks across 9 suites
+(hierarchy, roles, events, dues, shop, announcements, fundraisers, finance, razorpay) and cleans up after itself.
 
-This analysis assumes a single student organization with recurring events and a rotating leadership team. Before implementation, validate the organization’s approval rules, required personal-data fields, reporting obligations, event types, and whether one deployment must support multiple independent organizations.
+## How the platform is organised
+
+```
+Platform Admin
+└── College (e.g. LDCE)                     ← College Heads run it
+    ├── Students                            ← pick the college at sign-up; the Head approves them
+    └── Clubs (Coding, Robotics, ...)        ← created by a College Head
+        ├── Manager(s)                      ← appointed by the College Head
+        ├── Treasurer · Volunteers · Members ← join by request, manager approves
+        └── Events · Shop · Announcements · Fundraisers · Finance (all per club)
+```
+
+- **Sign-up uses any email.** Students choose their college from a list. Each college has an
+  **“Approve new students”** setting (on by default): when on, a College Head verifies each student. When off,
+  choosing the college is trusted.
+- **College membership and club membership are separate.** Being a verified LDCE student doesn't make you a
+  member of any club. You ask to join each club and its manager approves. A club can also require **paid dues**
+  after approval: members only count as members while their plan is active.
+- **A person can hold different roles in different clubs**, e.g. manager of one club and volunteer in another.
+  The sidebar shows one workspace per club you help run, plus your college if you head one.
+
+## Roles
+
+Each person sees only the pages their roles need (the sidebar is built from their roles), and the server
+checks the same rules on every request.
+
+| Who | Sees | Can do |
+|---|---|---|
+| **Platform Admin** | Dashboard, Colleges & Heads, Users, Reports, Support requests, Settings, Help | Add colleges, appoint/remove College Heads, manage accounts, platform-wide reports, answer help requests sent to the platform. **Not** a student, College Head or club member, and has no access inside colleges or clubs |
+| **College Head** | Dashboard, Clubs, Club Managers, Students, Events, Volunteers, Expense Management, Reports, Announcements, Support requests, Settings, My Expenses, Help | Create/archive clubs, appoint and remove club managers, approve students, approve and pay expenses from every club, college reports and announcements, answer students' help requests. Inside clubs: **view only** (except expenses and reports) |
+| **Club Manager** (per club) | My Club, Members, Volunteers, Events, Participants, Tasks, Announcements, Shop, Fundraisers, Expense Management, Finance, Reports, Settings | Run the club: members and roles (not managers), events with "volunteers needed", approve volunteer offers, create and assign tasks, participants, shop, news, expenses, money |
+| **Treasurer** (per club) | Volunteer pages + Expense Management, Finance, Reports | Volunteer powers plus approving/paying expenses and keeping the club's books |
+| **Volunteer** (per club) | My Events, My Tasks, Helping Out, Participants, Door check-in*, My Expenses | Offer to help at events (manager approves), start/complete tasks, see participants of events they help at, check people in (*if allowed), submit expenses |
+| **Student / member** | Events, College Events, My Registrations, My Membership, My Orders, Announcements | Register for events (public, own college, own clubs), join clubs, club cards and dues, merch |
+| **Guest** | Public Events, My Registrations, My Orders, Explore clubs | Register for public events at the guest price; ask to join clubs |
+
+Everyone has **Help & Support**: FAQs for their roles and a form that goes to their College Head (or to the
+Platform Admin for guests, College Heads and website problems). Statuses use plain words: tasks are
+Pending → In progress → Completed; expenses are Pending → Approved → Paid (or Rejected).
+
+Only a College Head can appoint or remove a club manager, and a club can't lose its last manager. Nobody can
+approve their own expense. Club role powers are defined in `server/src/config/roles.js` and checked through
+`server/src/services/access.js` (capabilities: staff, view, oversee, finance, money, manage).
 
 ## Development sample users
 
