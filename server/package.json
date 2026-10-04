@@ -12,7 +12,8 @@
     "test": "node tests/run-all.js",
     "seed:demo": "node src/scripts/seedDemo.js",
     "seed:catalog": "node src/scripts/seedCatalog.js",
-    "seed:users": "node src/scripts/seedUsers.js"
+    "seed:users": "node src/scripts/seedUsers.js",
+    "seed:users400": "node src/scripts/seedUsers400.js"
   },
   "keywords": [],
   "type": "commonjs",
