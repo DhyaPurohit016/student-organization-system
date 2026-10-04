@@ -41,7 +41,7 @@ export default function MyMembership() {
         </div>
       )}
 
-      <div className="card-grid">
+      <div className="card-grid membership-grid">
         {clubs.map((c) => {
           const card = cards[c.id];
           return (

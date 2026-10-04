@@ -936,3 +936,21 @@ input[type='checkbox'], input[type='radio'] {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Membership card: lay out by the card's own width, so the QR never covers the text in narrow columns */
+.member-card { flex-wrap: wrap; align-items: flex-start; }
+.member-card-info { flex: 1 1 190px; min-width: 0; }
+.member-card-name { overflow-wrap: anywhere; line-height: 1.2; }
+.member-card dl div { flex-wrap: wrap; column-gap: 10px; row-gap: 2px; }
+.member-card dt { min-width: 0; }
+.member-card dd { white-space: nowrap; }
+.member-card-qr { flex: 0 0 auto; width: 120px; height: 120px; margin-left: auto; }
+.membership-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+/* When the QR wraps under the details, centre it and make it easy to scan */
+@container (max-width: 440px) {
+  .member-card-qr { margin: 4px auto 0; width: 150px; height: 150px; }
+}
+.membership-grid > .card, .member-box { container-type: inline-size; }
+@media (max-width: 420px) {
+  .membership-grid { grid-template-columns: 1fr; }
+}
