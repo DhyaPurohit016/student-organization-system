@@ -23,6 +23,7 @@ function clubGuard(capability) {
       if (!club) throw new AppError('Club not found', 404);
       const a = await access.clubAccess(req.user, club);
       if (club.status === 'ARCHIVED' && !a.overseer) throw new AppError('This club has been archived', 410);
+      if (!(await College.count({ where: { id: club.collegeId, status: 'ACTIVE' } }))) throw new AppError("This club's college has been deactivated", 410);
       if (capability && !a.can[capability]) throw new AppError(MESSAGES[capability], 403);
       req.club = club;
       req.access = a;

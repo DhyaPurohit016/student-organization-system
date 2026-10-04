@@ -44,8 +44,8 @@ async function listClubs(req, res) {
 
 // GET /api/clubs/:clubId — public club page; logged-in visitors also get their standing (+ member card)
 async function getClub(req, res) {
-  const club = await Club.findByPk(req.params.clubId, { include: [{ model: College, as: 'college', attributes: ['id', 'name', 'code', 'city'] }] });
-  if (!club || club.status !== 'ACTIVE') throw new AppError('Club not found', 404);
+  const club = await Club.findByPk(req.params.clubId, { include: [{ model: College, as: 'college', attributes: ['id', 'name', 'code', 'city', 'status'] }] });
+  await access.assertClubOpen(club);
 
   const [members, managers, plans, news] = await Promise.all([
     ClubMember.count({ where: { clubId: club.id, status: 'ACTIVE' } }),
@@ -80,6 +80,8 @@ async function getClub(req, res) {
 async function join(req, res) {
   const club = await Club.findByPk(req.params.clubId);
   if (!club) throw new AppError('Club not found', 404);
+  // Archived clubs: the join service explains they aren't taking members. Deactivated colleges: not found.
+  if (club.status === 'ACTIVE') await access.assertClubOpen(club);
   const cm = await clubMemberService.requestToJoin(req.user, club, req.body.message);
   res.status(201).json({ membership: { status: cm.status }, message: 'Request sent. The club manager will review it.' });
 }
@@ -111,6 +113,7 @@ async function duesCheckout(req, res) {
 // GET /api/clubs/:clubId/products — the club's shop
 async function products(req, res) {
   const { ProductVariant } = require('../models');
+  await access.assertClubOpen(await Club.findByPk(req.params.clubId));
   const list = await Product.findAll({
     where: { clubId: req.params.clubId, isActive: true },
     include: [{ model: ProductVariant, as: 'variants', attributes: ['id', 'size', 'stock', 'sortOrder'] }],

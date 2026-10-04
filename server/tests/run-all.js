@@ -4,7 +4,7 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 // razorpay starts its own API instance + fake gateway, so it doesn't need the dev server's settings
-const SUITES = ['hierarchy', 'roles', 'events', 'dues', 'shop', 'announcements', 'fundraisers', 'finance', 'razorpay'];
+const SUITES = ['hierarchy', 'roles', 'deactivate', 'events', 'dues', 'shop', 'announcements', 'fundraisers', 'finance', 'razorpay'];
 const results = [];
 
 for (const name of SUITES) {

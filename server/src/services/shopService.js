@@ -49,7 +49,7 @@ async function createOrder(user, lines, note) {
     const clubIds = [...new Set(products.map((p) => p.clubId))];
     if (clubIds.length !== 1) throw new AppError('Your cart has items from different clubs. Please order from one club at a time.');
     const club = await Club.findByPk(clubIds[0], { transaction: t });
-    if (!club || club.status !== 'ACTIVE') throw new AppError("This club's shop is closed", 409);
+    if (!(await access.isClubOpen(club))) throw new AppError("This club's shop is closed", 409);
 
     // Member prices go to approved members of THIS club (plus any discount from their paid plan)
     const standing = await access.clubAccess(user, club, t);

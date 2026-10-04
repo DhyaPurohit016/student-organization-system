@@ -1,5 +1,7 @@
+const { Op } = require('sequelize');
 const { Announcement, Subscriber, User, Club, College, ClubMember } = require('../models');
 const service = require('../services/announcementService');
+const access = require('../services/access');
 const AppError = require('../utils/AppError');
 
 const INCLUDE = [
@@ -11,9 +13,9 @@ const ORDER = [['pinned', 'DESC'], ['publishedAt', 'DESC']];
 
 // GET /api/announcements?clubId=&collegeId= — public posts (website)
 async function listPublic(req, res) {
-  const where = { status: 'PUBLISHED', audience: 'PUBLIC' };
+  const where = { status: 'PUBLISHED', audience: 'PUBLIC', collegeId: { [Op.notIn]: [0, ...(await access.inactiveCollegeIds())] } };
   if (req.query.clubId) where.clubId = req.query.clubId;
-  if (req.query.collegeId) where.collegeId = req.query.collegeId;
+  if (req.query.collegeId) where.collegeId = { ...where.collegeId, [Op.eq]: req.query.collegeId };
   const announcements = await Announcement.findAll({ where, include: INCLUDE, order: ORDER, limit: Math.min(100, parseInt(req.query.limit, 10) || 50) });
   res.json({ announcements });
 }
@@ -21,6 +23,7 @@ async function listPublic(req, res) {
 // GET /api/announcements/feed — everything this user may see, across their college and clubs
 async function feed(req, res) {
   const where = { status: 'PUBLISHED', ...(await service.visibilityWhere(req.user)) };
+  where.collegeId = { [Op.notIn]: [0, ...(await access.inactiveCollegeIds())] }; // nothing from deactivated colleges
   if (req.query.clubId) where.clubId = req.query.clubId;
   const announcements = await Announcement.findAll({ where, include: INCLUDE, order: ORDER, limit: 100 });
   res.json({ announcements });

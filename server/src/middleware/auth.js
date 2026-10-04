@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const access = require('../services/access');
 const AppError = require('../utils/AppError');
 
 // Verifies the Bearer token and attaches the user to req.user
@@ -18,6 +19,9 @@ async function protect(req, res, next) {
 
     const user = await User.findByPk(payload.id);
     if (!user || !user.isActive) throw new AppError('Account not found or disabled', 401);
+    // A deactivated college logs out everyone in it straight away, not only at their next login
+    const blocked = await access.blockedByCollege(user);
+    if (blocked) throw new AppError(`${blocked.name} has been deactivated on the platform. Contact the Platform Admin.`, 401);
 
     req.user = user;
     next();
@@ -34,7 +38,7 @@ async function optionalAuth(req, res, next) {
   try {
     const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
     const user = await User.findByPk(payload.id);
-    if (user?.isActive) req.user = user;
+    if (user?.isActive && !(await access.blockedByCollege(user))) req.user = user;
   } catch {
     /* bad or expired token: treat as a visitor */
   }

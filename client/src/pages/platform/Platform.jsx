@@ -131,7 +131,7 @@ export function PlatformColleges() {
                   <Link to={`/college/${c.id}`} className="strong-link">
                     {c.name}
                   </Link>{' '}
-                  {c.status !== 'ACTIVE' && <Badge status="DISABLED">Inactive</Badge>}
+                  {c.status !== 'ACTIVE' && <Badge status="DISABLED">Deactivated</Badge>}
                   <div className="muted small">
                     {c.code}
                     {c.city && ` · ${c.city}`}
@@ -187,6 +187,7 @@ function CollegeModal({ college, onClose, onDone }) {
     e.preventDefault();
     try {
       const { headEmail, ...rest } = form;
+      if (!isNew && rest.status === 'INACTIVE' && college.status !== 'INACTIVE' && !confirm(`Deactivate ${college.name}? Everyone in it will be logged out and can't log in until you reactivate it.`)) return;
       if (isNew) await api.post('/platform/colleges', { ...rest, headEmail: headEmail || undefined });
       else await api.patch(`/platform/colleges/${college.id}`, rest);
       onDone(isNew ? `${form.name} added.` : 'College saved.');
@@ -228,9 +229,15 @@ function CollegeModal({ college, onClose, onDone }) {
             Status
             <select value={form.status} onChange={set('status')}>
               <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive (hidden)</option>
+              <option value="INACTIVE">Deactivated</option>
             </select>
           </label>
+        )}
+        {!isNew && form.status === 'INACTIVE' && (
+          <div className="alert alert-warn small">
+            While deactivated, nobody from {college.name} can log in: its College Heads, students, club managers and volunteers. Its clubs, events, shop and announcements
+            disappear from the website, and nobody (including members from other colleges) can join, register or buy anything there. Reactivate it to bring everything back.
+          </div>
         )}
         <label className="checkbox">
           <input type="checkbox" checked={form.approveStudents} onChange={(e) => setForm({ ...form, approveStudents: e.target.checked })} />

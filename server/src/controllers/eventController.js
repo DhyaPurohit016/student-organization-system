@@ -65,8 +65,10 @@ async function listPublic(req, res) {
     status: { [Op.in]: ['PUBLISHED', 'CANCELLED'] },
     startsAt: past ? { [Op.lt]: now } : { [Op.gte]: new Date(now.getTime() - 6 * 3600000) },
     [Op.or]: [{ visibility: 'PUBLIC' }, ...(await privateScope(req.user))],
+    collegeId: { [Op.notIn]: [0, ...(await access.inactiveCollegeIds())] },
   };
-  if (req.query.collegeId) where.collegeId = req.query.collegeId;
+  // Narrowing to one college keeps the deactivated-college filter
+  if (req.query.collegeId) where.collegeId = { ...where.collegeId, [Op.eq]: req.query.collegeId };
   if (req.query.clubId) where.clubId = req.query.clubId;
   const events = await Event.findAll({
     where,
@@ -81,7 +83,7 @@ async function listPublic(req, res) {
 // GET /api/events/:id — private events look "not found" to people who can't attend
 async function getPublic(req, res) {
   const event = await Event.findOne({ where: { id: req.params.id, status: { [Op.in]: ['PUBLISHED', 'CANCELLED'] } }, include: [CLUB_INCLUDE] });
-  if (!event || !(await access.canSeeEvent(req.user, event, event.club))) throw new AppError('Event not found', 404);
+  if (!event || !(await access.isClubOpen(event.club)) || !(await access.canSeeEvent(req.user, event, event.club))) throw new AppError('Event not found', 404);
   const taken = await takenCounts([event.id]);
   res.json({ event: publicShape(event, taken[event.id]) });
 }
@@ -89,12 +91,14 @@ async function getPublic(req, res) {
 // GET /api/events/:id/quote — can I register, and at which price?
 async function getQuote(req, res) {
   const event = await Event.findOne({ where: { id: req.params.id, status: 'PUBLISHED' }, include: [CLUB_INCLUDE] });
-  if (!event || !(await access.canSeeEvent(req.user, event, event.club))) throw new AppError('Event not found', 404);
+  if (!event || !(await access.isClubOpen(event.club)) || !(await access.canSeeEvent(req.user, event, event.club))) throw new AppError('Event not found', 404);
   res.json({ quote: await ticketService.quote(event, req.user, undefined, event.club) });
 }
 
 // POST /api/events/:id/checkout { quantity, holderNames }
 async function checkout(req, res) {
+  const event = await Event.findByPk(req.params.id, { include: [CLUB_INCLUDE] });
+  if (!event || !(await access.isClubOpen(event.club))) throw new AppError('Event not found', 404);
   res.status(201).json(await ticketService.checkout(req.params.id, req.user, req.body));
 }
 
@@ -125,7 +129,7 @@ async function myTickets(req, res) {
 async function checkinEvents(req, res) {
   const now = new Date();
   const events = await Event.findAll({
-    where: { status: 'PUBLISHED', startsAt: { [Op.between]: [new Date(now.getTime() - 24 * 3600000), new Date(now.getTime() + 30 * 86400000)] } },
+    where: { status: 'PUBLISHED', collegeId: { [Op.notIn]: [0, ...(await access.inactiveCollegeIds())] }, startsAt: { [Op.between]: [new Date(now.getTime() - 24 * 3600000), new Date(now.getTime() + 30 * 86400000)] } },
     include: [CLUB_INCLUDE],
     order: [['startsAt', 'ASC']],
   });
@@ -137,6 +141,7 @@ async function checkinEvents(req, res) {
 async function loadCheckinEvent(req) {
   const event = await Event.findByPk(req.params.id || req.body.eventId, { include: [CLUB_INCLUDE] });
   if (!event) throw new AppError('Choose the event you are checking people in for', 400);
+  if (!(await access.isClubOpen(event.club))) throw new AppError("This event's college has been deactivated", 410);
   if (!(await access.canCheckIn(req.user, event, event.club))) throw new AppError("You aren't on the check-in team for this event", 403);
   return event;
 }
@@ -175,7 +180,7 @@ async function helpingOut(req, res) {
   const clubIds = await access.myClubIds(req.user, 'staff');
   if (!clubIds.length) return res.json({ events: [] });
   const events = await Event.findAll({
-    where: { clubId: clubIds, status: 'PUBLISHED', startsAt: { [Op.gte]: new Date() } },
+    where: { clubId: clubIds, status: 'PUBLISHED', collegeId: { [Op.notIn]: [0, ...(await access.inactiveCollegeIds())] }, startsAt: { [Op.gte]: new Date() } },
     include: [{ model: Club, as: 'club', attributes: ['id', 'name'] }],
     order: [['startsAt', 'ASC']],
     limit: 100,
@@ -199,7 +204,7 @@ async function helpingOut(req, res) {
 // POST /api/events/:id/volunteer { duty, message } — offer to help; the club manager approves
 async function offerToHelp(req, res) {
   const event = await Event.findByPk(req.params.id, { include: [CLUB_INCLUDE] });
-  if (!event || event.status !== 'PUBLISHED') throw new AppError('Event not found', 404);
+  if (!event || event.status !== 'PUBLISHED' || !(await access.isClubOpen(event.club))) throw new AppError('Event not found', 404);
   if (!(await access.clubAccess(req.user, event.club)).can.staff) throw new AppError("Only this club's volunteers can offer to help at its events", 403);
   if (new Date(event.startsAt) < new Date()) throw new AppError('This event has already started');
   const existing = await EventVolunteer.findOne({ where: { eventId: event.id, userId: req.user.id } });

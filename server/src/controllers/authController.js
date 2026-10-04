@@ -1,4 +1,5 @@
 const { User, College, CollegeAdmin } = require('../models');
+const access = require('../services/access');
 const AppError = require('../utils/AppError');
 const { signToken } = require('../utils/token');
 const { notify } = require('../services/notificationService');
@@ -43,6 +44,8 @@ async function login(req, res) {
   const user = await User.scope('withPassword').findOne({ where: { email: String(email).trim().toLowerCase() } });
   if (!user || !(await user.comparePassword(String(password)))) throw new AppError('Invalid email or password', 401);
   if (!user.isActive) throw new AppError('This account has been disabled', 403);
+  const blocked = await access.blockedByCollege(user);
+  if (blocked) throw new AppError(`${blocked.name} has been deactivated on the platform, so its accounts can't log in. Contact the Platform Admin.`, 403);
 
   await User.update({ lastLoginAt: new Date() }, { where: { id: user.id } });
   sendAuth(res, user);

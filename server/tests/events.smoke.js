@@ -49,14 +49,14 @@ run('Events', async () => {
     check(`${vis} event: who may register`, JSON.stringify(got) === JSON.stringify(expect[vis]), got);
   }
 
-  // Private events are hidden from people who can't attend
-  [s, j] = await call('GET', '/events', null, external.token);
+  // Private events are hidden from people who can't attend (filtered to this club so a big database doesn't page them out)
+  [s, j] = await call('GET', `/events?clubId=${club.id}`, null, external.token);
   check('other-college student sees the public event only', j.events.some((e) => e.id === hack.id) && !j.events.some((e) => e.id === internal.id || e.id === meetup.id));
-  [s, j] = await call('GET', '/events');
+  [s, j] = await call('GET', `/events?clubId=${club.id}`);
   check('logged-out visitors see public events only', j.events.some((e) => e.id === hack.id) && !j.events.some((e) => e.id === internal.id));
-  [s, j] = await call('GET', '/events', null, collegeStudent.token);
+  [s, j] = await call('GET', `/events?clubId=${club.id}`, null, collegeStudent.token);
   check('same-college student sees college events but not club-only ones', j.events.some((e) => e.id === internal.id) && !j.events.some((e) => e.id === meetup.id));
-  [s, j] = await call('GET', '/events', null, member.token);
+  [s, j] = await call('GET', `/events?clubId=${club.id}`, null, member.token);
   check('club member sees all three', [hack, internal, meetup].every((ev) => j.events.some((e) => e.id === ev.id)));
   [s] = await call('GET', `/events/${internal.id}`, null, external.token);
   check('private event page → 404 for outsiders', s === 404);

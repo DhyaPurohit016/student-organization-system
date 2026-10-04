@@ -1,6 +1,7 @@
 // The one place that decides who may do what. Routes and services ask here instead of checking roles themselves.
 const { Op } = require('sequelize');
-const { Club, ClubMember, CollegeAdmin, Membership, EventVolunteer } = require('../models');
+const { Club, ClubMember, College, CollegeAdmin, Membership, EventVolunteer } = require('../models');
+const AppError = require('../utils/AppError');
 const { CLUB_CAN } = require('../config/roles');
 
 const isPlatformAdmin = (user) => user?.role === 'PLATFORM_ADMIN';
@@ -118,4 +119,35 @@ async function loadClub(clubId) {
   return Club.findByPk(clubId);
 }
 
-module.exports = { isPlatformAdmin, isCollegeHead, isVerifiedStudentOf, currentDues, clubAccess, eventEligibility, canSeeEvent, canCheckIn, myClubIds, loadClub };
+// ---------- Deactivated colleges ----------
+// When the Platform Admin deactivates a college, everything in it is switched off.
+
+// Ids of deactivated colleges (to hide their clubs, events and news from lists)
+async function inactiveCollegeIds() {
+  return (await College.findAll({ where: { status: 'INACTIVE' }, attributes: ['id'] })).map((c) => c.id);
+}
+
+// The deactivated college that stops this person using the platform, if any: the college they belong to,
+// or one they are College Head of. Platform Admins are never blocked.
+async function blockedByCollege(user) {
+  if (!user || isPlatformAdmin(user)) return null;
+  const heads = await CollegeAdmin.findAll({ where: { userId: user.id }, attributes: ['collegeId'] });
+  const ids = [user.collegeId, ...heads.map((h) => h.collegeId)].filter(Boolean);
+  if (!ids.length) return null;
+  return College.findOne({ where: { id: ids, status: 'INACTIVE' }, attributes: ['id', 'name'] });
+}
+
+// Open = the club isn't archived and its college is active
+async function isClubOpen(club) {
+  if (!club || club.status !== 'ACTIVE') return false;
+  const status = club.college?.status ?? (await College.findByPk(club.collegeId, { attributes: ['status'] }))?.status;
+  return status === 'ACTIVE';
+}
+
+// Throws "not found" for clubs that are archived or whose college is deactivated
+async function assertClubOpen(club, what = 'Club') {
+  if (!(await isClubOpen(club))) throw new AppError(`${what} not found`, 404);
+  return club;
+}
+
+module.exports = { inactiveCollegeIds, blockedByCollege, isClubOpen, assertClubOpen, isPlatformAdmin, isCollegeHead, isVerifiedStudentOf, currentDues, clubAccess, eventEligibility, canSeeEvent, canCheckIn, myClubIds, loadClub };
